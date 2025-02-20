@@ -8,7 +8,7 @@ import pika
 from src.configs.nodes.cosmos import CosmosNodeConfig
 from src.message_broker.rabbitmq import RabbitMQApi
 from src.monitors.cosmos import (
-    CosmosMonitor, _REST_VERSION_COSMOS_SDK_0_42_6,
+    _REST_VERSION_COSMOS_SDK_0_50_1, CosmosMonitor, _REST_VERSION_COSMOS_SDK_0_42_6,
     _REST_VERSION_COSMOS_SDK_0_39_2, _VERSION_INCOMPATIBILITY_EXCEPTIONS)
 from src.utils.constants.cosmos import (
     PROPOSAL_STATUS_UNSPECIFIED, PROPOSAL_STATUS_DEPOSIT_PERIOD,
@@ -197,6 +197,47 @@ class CosmosNetworkMonitor(CosmosMonitor):
         return self._execute_cosmos_rest_retrieval_with_exceptions(
             retrieval_process, source_name, source_url,
             _REST_VERSION_COSMOS_SDK_0_42_6)
+        
+    def _get_cosmos_rest_v0_50_1_indirect_data(
+            self, source: CosmosNodeConfig) -> Dict:
+        """
+        This function retrieves network specific metrics. To retrieve this
+        data we use version v0.50.1 of the Cosmos SDK for the REST server.
+        :param source: The chosen data source
+        :return: A dict containing all indirect metrics
+        :raises: CosmosSDKVersionIncompatibleException if the Cosmos SDK version
+                 of the source is not compatible with v0.50.1
+               : CosmosRestServerApiCallException if an error occurs during an
+                 API call
+               : DataReadingException if data cannot be read from the source
+               : CannotConnectWithDataSourceException if we cannot connect with
+                 the data source
+               : InvalidUrlException if the URL of the data source does not have
+                 a valid schema
+               : IncorrectJSONRetrievedException if the structure of the data
+                 returned by the endpoints is not as expected. This could be
+                 both due to a Tendermint or Cosmos SDK update
+        """
+        source_url = source.cosmos_rest_url
+        source_name = source.node_name
+
+        def retrieval_process() -> Dict:
+            paginated_data = self._get_rest_data_with_pagination_keys(
+                self.cosmos_rest_server_api.get_proposals_v0_50_1,
+                [source_url, None], {}, source_name,
+                _REST_VERSION_COSMOS_SDK_0_50_1)
+
+            parsed_proposals = {'proposals': []}
+            for page in paginated_data:
+                for proposal in page['proposals']:
+                    parsed_proposals['proposals'].append(
+                        self._parse_proposal(proposal))
+
+            return parsed_proposals
+
+        return self._execute_cosmos_rest_retrieval_with_exceptions(
+            retrieval_process, source_name, source_url,
+            _REST_VERSION_COSMOS_SDK_0_50_1)
 
     def _get_cosmos_rest_indirect_data(self, source: CosmosNodeConfig,
                                        sdk_version: str) -> Dict:
@@ -216,6 +257,9 @@ class CosmosNetworkMonitor(CosmosMonitor):
             return self._get_cosmos_rest_v0_39_2_indirect_data(source)
         elif sdk_version == _REST_VERSION_COSMOS_SDK_0_42_6:
             return self._get_cosmos_rest_v0_42_6_indirect_data(source)
+        elif sdk_version == _REST_VERSION_COSMOS_SDK_0_50_1:
+            return self._get_cosmos_rest_v0_50_1_indirect_data(source)
+            
 
         return {
             'proposals': None
@@ -269,6 +313,16 @@ class CosmosNetworkMonitor(CosmosMonitor):
         """
         return self._get_cosmos_rest_version_data(
             _REST_VERSION_COSMOS_SDK_0_42_6)
+        
+    def _get_cosmos_rest_v0_50_1_data(self) -> (
+            Dict, bool, Optional[Exception]):
+        """
+        This function calls self._get_cosmos_rest_version_data with
+        _REST_VERSION_COSMOS_SDK_0_50_1
+        :return: The return of self._get_cosmos_rest_version_data
+        """
+        return self._get_cosmos_rest_version_data(
+            _REST_VERSION_COSMOS_SDK_0_50_1)
 
     def _get_cosmos_rest_data(self) -> (Dict, bool, Optional[Exception]):
         """
@@ -283,6 +337,7 @@ class CosmosNetworkMonitor(CosmosMonitor):
         supported_retrievals = {
             _REST_VERSION_COSMOS_SDK_0_39_2: self._get_cosmos_rest_v0_39_2_data,
             _REST_VERSION_COSMOS_SDK_0_42_6: self._get_cosmos_rest_v0_42_6_data,
+            _REST_VERSION_COSMOS_SDK_0_50_1: self._get_cosmos_rest_v0_50_1_data
         }
 
         # First check whether REST data can be obtained using the last REST

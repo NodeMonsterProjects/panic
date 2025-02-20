@@ -34,7 +34,7 @@ class CosmosRestServerApiWrapper(ApiWrapper):
         :param cosmos_rest_url: The Cosmos REST url of the data source
         :return: Retrieves data from the cosmos_rest_url/syncing endpoint
         """
-        endpoint = cosmos_rest_url + '/syncing'
+        endpoint = cosmos_rest_url + '/cosmos/base/tendermint/v1beta1/syncing'
         return get_cosmos_json(endpoint=endpoint, logger=self.logger,
                                verify=self.verify, timeout=self.timeout)
 
@@ -77,6 +77,34 @@ class CosmosRestServerApiWrapper(ApiWrapper):
                : cosmos_rest_url/cosmos/staking/v1beta1/validators or
                : cosmos_rest_url/cosmos/staking/v1beta1/validators/{
                : validatorAddr} endpoints
+        """
+        cosmos_fn = (
+            '/cosmos/staking/v1beta1/validators' if validator_address is None
+            else '/cosmos/staking/v1beta1/validators/{}'.format(
+                validator_address)
+        )
+        endpoint = cosmos_rest_url + cosmos_fn
+        return get_cosmos_json(endpoint=endpoint, logger=self.logger,
+                               params=params, verify=self.verify,
+                               timeout=self.timeout)
+        
+    def get_staking_validators_v0_50_1(
+            self, cosmos_rest_url: str, validator_address: str = None,
+            params: Dict = None) -> Dict:
+        """
+        This function retrieves data from the
+        cosmos_rest_url/cosmos/staking/v1beta1/validators and
+        cosmos_rest_url/cosmos/staking/v1beta1/validators/{validatorAddr}
+        endpoints, depending on the inputted function parameters. Note that this
+        function is only compatible with v0.50.1 of the Cosmos SDK, for other
+        versions unexpected behaviour might occur.
+        :param cosmos_rest_url: The Cosmos REST url of the data source
+        :param params: Parameters that need to be added to the endpoint
+        :param validator_address: The address of the validator you want to query
+        :return: Retrieves data from the
+                : cosmos_rest_url/cosmos/staking/v1beta1/validators or
+                : cosmos_rest_url/cosmos/staking/v1beta1/validators/{
+                : validatorAddr} endpoints
         """
         cosmos_fn = (
             '/cosmos/staking/v1beta1/validators' if validator_address is None
@@ -131,6 +159,34 @@ class CosmosRestServerApiWrapper(ApiWrapper):
         cosmos_fn = (
             '/cosmos/gov/v1beta1/proposals' if proposal_id is None
             else '/cosmos/gov/v1beta1/proposals/{}'.format(
+                proposal_id)
+        )
+        endpoint = cosmos_rest_url + cosmos_fn
+        return get_cosmos_json(endpoint=endpoint, logger=self.logger,
+                               params=params, verify=self.verify,
+                               timeout=self.timeout)
+        
+    def get_proposals_v0_50_1(
+            self, cosmos_rest_url: str, proposal_id: int = None,
+            params: Dict = None) -> Dict:
+        """
+        This function retrieves data from the
+        cosmos_rest_url/cosmos/gov/v1beta1/proposals and
+        cosmos_rest_url/cosmos/gov/v1beta1/proposals/{proposalId}
+        endpoints, depending on the inputted function parameters. Note that this
+        function is only compatible with v0.50.1 of the Cosmos SDK, for other
+        versions unexpected behaviour might occur.
+        :param cosmos_rest_url: The Cosmos REST url of the data source
+        :param params: Parameters that need to be added to the endpoint
+        :param proposal_id: The ID of the proposal you want to query
+        :return: Retrieves data from the
+                : cosmos_rest_url/cosmos/gov/v1beta1/proposals or
+                : cosmos_rest_url/cosmos/gov/v1beta1/proposals/{
+                : proposalId} endpoints
+        """
+        cosmos_fn = (
+            '/cosmos/gov/v1/proposals' if proposal_id is None
+            else '/cosmos/gov/v1/proposals/{}'.format(
                 proposal_id)
         )
         endpoint = cosmos_rest_url + cosmos_fn

@@ -14,7 +14,7 @@ from urllib3.exceptions import ProtocolError
 from src.configs.nodes.cosmos import CosmosNodeConfig
 from src.message_broker.rabbitmq import RabbitMQApi
 from src.monitors.cosmos import (
-    CosmosMonitor, _REST_VERSION_COSMOS_SDK_0_42_6,
+    _REST_VERSION_COSMOS_SDK_0_50_1, CosmosMonitor, _REST_VERSION_COSMOS_SDK_0_42_6,
     _REST_VERSION_COSMOS_SDK_0_39_2, _VERSION_INCOMPATIBILITY_EXCEPTIONS)
 from src.utils.constants.cosmos import (
     BOND_STATUS_BONDED, BOND_STATUS_UNBONDED, BOND_STATUS_UNBONDING,
@@ -249,6 +249,58 @@ class CosmosNodeMonitor(CosmosMonitor):
         return self._execute_cosmos_rest_retrieval_with_exceptions(
             retrieval_process, source_name, source_url,
             _REST_VERSION_COSMOS_SDK_0_42_6)
+        
+    def _get_cosmos_rest_v0_50_1_indirect_data_validator(
+            self, source: CosmosNodeConfig) -> Dict:
+        """
+        This function retrieves node specific metrics using a different node as
+        data source. We do not use the node directly since the node may be
+        offline or syncing, thus the data may be corrupt. Note that as a last
+        resource the manager may supply the node itself as data source. To
+        retrieve this data we use version v0.50.1 of the Cosmos SDK for the REST
+        server. NOTE: In this function we are assuming that the node being
+        monitored is a validator.
+        :param source: The chosen data source
+        :return: A dict containing all indirect metrics
+        :raises: CosmosSDKVersionIncompatibleException if the Cosmos SDK version
+                 of the source is not compatible with v0.50.1
+               : CosmosRestServerApiCallException if an error occurs during an
+                 API call
+               : DataReadingException if data cannot be read from the source
+               : CannotConnectWithDataSourceException if we cannot connect with
+                 the data source
+               : InvalidUrlException if the URL of the data source does not have
+                 a valid schema
+               : IncorrectJSONRetrievedException if the structure of the data
+                 returned by the endpoints is not as expected. This could be
+                 both due to a Tendermint or Cosmos SDK update
+        """
+        operator_address = self.node_config.operator_address
+        source_url = source.cosmos_rest_url
+        source_name = source.node_name
+        
+        def retrieval_process() -> Dict:
+            staking_validators = \
+                self.cosmos_rest_server_api.execute_with_checks(
+                    self.cosmos_rest_server_api.get_staking_validators_v0_50_1,
+                    [source_url, operator_address, {}], source_name,
+                    _REST_VERSION_COSMOS_SDK_0_50_1)
+            bond_status = self._parse_validator_status(
+                staking_validators['validator']['status'])
+            return {
+                'bond_status': bond_status,
+
+                # The 'jailed' keyword is normally exposed in
+                # cosmos/staking/v1beta1/validators for v0.50.1 of the Cosmos
+                # SDK only. If we encounter nodes on this version which do not
+                # expose it we might need to use
+                # /cosmos/slashing/v1beta1/signing_infos
+                'jailed': staking_validators['validator']['jailed'],
+            }
+            
+        return self._execute_cosmos_rest_retrieval_with_exceptions(
+            retrieval_process, source_name, source_url,
+            _REST_VERSION_COSMOS_SDK_0_50_1)
 
     def _get_cosmos_rest_indirect_data(self, source: CosmosNodeConfig,
                                        sdk_version: str) -> Dict:
@@ -275,6 +327,9 @@ class CosmosNodeMonitor(CosmosMonitor):
                     source)
             elif sdk_version == _REST_VERSION_COSMOS_SDK_0_42_6:
                 return self._get_cosmos_rest_v0_42_6_indirect_data_validator(
+                    source)
+            elif sdk_version == _REST_VERSION_COSMOS_SDK_0_50_1:
+                return self._get_cosmos_rest_v0_50_1_indirect_data_validator(
                     source)
             else:
                 return {
@@ -344,6 +399,16 @@ class CosmosNodeMonitor(CosmosMonitor):
         """
         return self._get_cosmos_rest_version_data(
             _REST_VERSION_COSMOS_SDK_0_42_6)
+        
+    def _get_cosmos_rest_v0_50_1_data(self) -> (
+            Dict, bool, Optional[Exception]):
+        """
+        This function calls self._get_cosmos_rest_version_data with
+        _REST_VERSION_COSMOS_SDK_0_50_1
+        :return: The return of self._get_cosmos_rest_version_data
+        """
+        return self._get_cosmos_rest_version_data(
+            _REST_VERSION_COSMOS_SDK_0_50_1)
 
     def _get_cosmos_rest_data(self) -> (Dict, bool, Optional[Exception]):
         """
@@ -358,6 +423,7 @@ class CosmosNodeMonitor(CosmosMonitor):
         supported_retrievals = {
             _REST_VERSION_COSMOS_SDK_0_39_2: self._get_cosmos_rest_v0_39_2_data,
             _REST_VERSION_COSMOS_SDK_0_42_6: self._get_cosmos_rest_v0_42_6_data,
+            _REST_VERSION_COSMOS_SDK_0_50_1: self._get_cosmos_rest_v0_50_1_data,
         }
 
         # First check whether REST data can be obtained using the last REST

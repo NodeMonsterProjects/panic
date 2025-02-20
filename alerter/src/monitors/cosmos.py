@@ -25,6 +25,7 @@ from src.utils.exceptions import (
 
 _REST_VERSION_COSMOS_SDK_0_39_2 = 'v0.39.2'
 _REST_VERSION_COSMOS_SDK_0_42_6 = 'v0.42.6'
+_REST_VERSION_COSMOS_SDK_0_50_1 = 'v0.50.1'
 _VERSION_INCOMPATIBILITY_EXCEPTIONS = [
     IncorrectJSONRetrievedException, CosmosSDKVersionIncompatibleException,
     TendermintRPCIncompatibleException
@@ -48,7 +49,7 @@ class CosmosMonitor(Monitor, ABC):
 
         # This variable stores the latest REST version used to retrieve the
         # data. By default, it is set to v0.42.6 of the Cosmos SDK.
-        self._last_rest_retrieval_version = _REST_VERSION_COSMOS_SDK_0_42_6
+        self._last_rest_retrieval_version = _REST_VERSION_COSMOS_SDK_0_50_1
 
     @property
     def data_sources(self) -> List[CosmosNodeConfig]:
