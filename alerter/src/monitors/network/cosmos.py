@@ -79,11 +79,15 @@ class CosmosNetworkMonitor(CosmosMonitor):
                 proposal['content']['value']['title']
                 if 'value' in proposal['content']
                 else proposal['content']['title']
+                if 'content' in proposal
+                else proposal['title']
             ),
             'description': (
                 proposal['content']['value']['description']
                 if 'value' in proposal['content']
                 else proposal['content']['description']
+                if 'content' in proposal
+                else proposal['summary']
             )
         }
 

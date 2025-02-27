@@ -292,7 +292,7 @@ class CosmosNodeMonitor(CosmosMonitor):
 
                 # The 'jailed' keyword is normally exposed in
                 # cosmos/staking/v1beta1/validators for v0.50.1 of the Cosmos
-                # SDK only. If we encounter nodes on this version which do not
+                # SDK. If we encounter nodes on this version which do not
                 # expose it we might need to use
                 # /cosmos/slashing/v1beta1/signing_infos
                 'jailed': staking_validators['validator']['jailed'],
@@ -612,14 +612,18 @@ class CosmosNodeMonitor(CosmosMonitor):
                 attributes = event['attributes']
                 for attribute in attributes:
                     if 'key' in attribute and 'value' in attribute:
-                        decoded_key = base64.b64decode(attribute['key']).decode(
-                            'utf-8')
-                        decoded_value = base64.b64decode(
-                            attribute['value']).decode('utf-8')
-                        if str.lower(decoded_key) == "address":
-                            event_address = bech32_to_address(decoded_value)
-                        elif str.lower(decoded_key) == "burned_coins":
-                            event_burned_coins = int(decoded_value)
+                        # decoded_key = base64.b64decode(attribute['key']).decode(
+                        #     'utf-8')
+                        # decoded_value = base64.b64decode(
+                        #     attribute['value']).decode('utf-8')
+                        # if str.lower(decoded_key) == "address":
+                        #     event_address = bech32_to_address(decoded_value)
+                        # elif str.lower(decoded_key) == "burned_coins":
+                        #     event_burned_coins = int(decoded_value)
+                        if str.lower(attribute['key']) == "address":
+                            event_address = bech32_to_address(attribute['value'])
+                        elif str.lower(attribute['key']) == "burned_coins":
+                            event_burned_coins = int(attribute['value'])
 
                 if event_address == self.validator_consensus_address:
                     slashed = True
@@ -683,7 +687,10 @@ class CosmosNodeMonitor(CosmosMonitor):
                         [source_url, {'height': height_to_monitor}],
                         source_name)
                 slashed, slashed_amount = self._validator_was_slashed(
-                    block_results_at_height['result']['begin_block_events'])
+                    block_results_at_height['result']['begin_block_events'] 
+                    if 'begin_block_events' in block_results_at_height['result'] 
+                    else block_results_at_height['result']['finalize_block_events']
+                    )
 
                 if validator_was_active:
                     previous_block_signatures = block_at_height['result'][
