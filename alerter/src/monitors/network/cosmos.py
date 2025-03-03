@@ -59,69 +59,69 @@ class CosmosNetworkMonitor(CosmosMonitor):
 
     @staticmethod
     def _parse_proposal(proposal: Dict) -> Dict:
-        """
-        This function parses the proposal retrieved from the source node and
-        returns the corresponding value to be used by the PANIC components.
-        Note that this function is compatible with both v0.39.2 and v0.42.6 of
-        the Cosmos SDK.
-        :param proposal: The proposal retrieved from the source node
-        :return: The corresponding proposal to be used by the PANIC components
-        :raises: KeyError if the structure of the proposal returned by the
-                 endpoints is not as expected.
-        """
-        parsed_proposal = {
-            'proposal_id': (
-                proposal['proposal_id']
-                if 'proposal_id' in proposal
-                else proposal['id']
-            ),
-            'title': (
-                proposal['content']['value']['title']
-                if 'value' in proposal['content']
-                else proposal['content']['title']
-                if 'content' in proposal
-                else proposal['title']
-            ),
-            'description': (
-                proposal['content']['value']['description']
-                if 'value' in proposal['content']
-                else proposal['content']['description']
-                if 'content' in proposal
-                else proposal['summary']
+            """
+            This function parses the proposal retrieved from the source node and
+            returns the corresponding value to be used by the PANIC components.
+            Note that this function is compatible with both v0.39.2, v0.42.6 and v0.50.1 of
+            the Cosmos SDK.
+            :param proposal: The proposal retrieved from the source node
+            :return: The corresponding proposal to be used by the PANIC components
+            :raises: KeyError if the structure of the proposal returned by the
+                    endpoints is not as expected.
+            """
+            parsed_proposal = {
+                'proposal_id': (
+                    proposal['proposal_id']
+                    if 'proposal_id' in proposal
+                    else proposal['id']
+                ),
+                'title': (
+                    proposal['content']['value']['title']
+                    if 'content' in proposal and 'value' in proposal['content']
+                    else proposal['content']['title']
+                    if 'content' in proposal
+                    else proposal['title']
+                ),
+                'description': (
+                    proposal['content']['value']['description']
+                    if 'content' in proposal and 'value' in proposal['content']
+                    else proposal['content']['description']
+                    if 'content' in proposal
+                    else proposal['summary']
+                )
+            }
+
+            status = (
+                proposal['status']
+                if 'status' in proposal
+                else proposal['proposal_status']
             )
-        }
 
-        status = (
-            proposal['status']
-            if 'status' in proposal
-            else proposal['proposal_status']
-        )
+            if type(status) == str:
+                status = status.lower()
+            if status in [0, "proposal_status_unspecified", "unspecified"]:
+                parsed_proposal['status'] = PROPOSAL_STATUS_UNSPECIFIED
+            elif status in [1, "proposal_status_deposit_period", "deposit_period"]:
+                parsed_proposal['status'] = PROPOSAL_STATUS_DEPOSIT_PERIOD
+            elif status in [2, "proposal_status_voting_period", "voting_period"]:
+                parsed_proposal['status'] = PROPOSAL_STATUS_VOTING_PERIOD
+            elif status in [3, "proposal_status_passed", "passed"]:
+                parsed_proposal['status'] = PROPOSAL_STATUS_PASSED
+            elif status in [4, "proposal_status_rejected", "rejected"]:
+                parsed_proposal['status'] = PROPOSAL_STATUS_REJECTED
+            elif status in [5, "proposal_status_failed", "failed"]:
+                parsed_proposal['status'] = PROPOSAL_STATUS_FAILED
+            else:
+                parsed_proposal['status'] = PROPOSAL_STATUS_INVALID
 
-        if type(status) == str:
-            status = status.lower()
-        if status in [0, "proposal_status_unspecified", "unspecified"]:
-            parsed_proposal['status'] = PROPOSAL_STATUS_UNSPECIFIED
-        elif status in [1, "proposal_status_deposit_period", "deposit_period"]:
-            parsed_proposal['status'] = PROPOSAL_STATUS_DEPOSIT_PERIOD
-        elif status in [2, "proposal_status_voting_period", "voting_period"]:
-            parsed_proposal['status'] = PROPOSAL_STATUS_VOTING_PERIOD
-        elif status in [3, "proposal_status_passed", "passed"]:
-            parsed_proposal['status'] = PROPOSAL_STATUS_PASSED
-        elif status in [4, "proposal_status_rejected", "rejected"]:
-            parsed_proposal['status'] = PROPOSAL_STATUS_REJECTED
-        elif status in [5, "proposal_status_failed", "failed"]:
-            parsed_proposal['status'] = PROPOSAL_STATUS_FAILED
-        else:
-            parsed_proposal['status'] = PROPOSAL_STATUS_INVALID
+            parsed_proposal['final_tally_result'] = proposal['final_tally_result']
+            parsed_proposal['submit_time'] = proposal['submit_time']
+            parsed_proposal['deposit_end_time'] = proposal['deposit_end_time']
+            parsed_proposal['total_deposit'] = proposal['total_deposit']
+            parsed_proposal['voting_start_time'] = proposal['voting_start_time']
+            parsed_proposal['voting_end_time'] = proposal['voting_end_time']
 
-        parsed_proposal['final_tally_result'] = proposal['final_tally_result']
-        parsed_proposal['submit_time'] = proposal['submit_time']
-        parsed_proposal['deposit_end_time'] = proposal['deposit_end_time']
-        parsed_proposal['total_deposit'] = proposal['total_deposit']
-        parsed_proposal['voting_start_time'] = proposal['voting_start_time']
-        parsed_proposal['voting_end_time'] = proposal['voting_end_time']
-
-        return parsed_proposal
+            return parsed_proposal
 
     def _get_cosmos_rest_v0_39_2_indirect_data(
             self, source: CosmosNodeConfig) -> Dict:

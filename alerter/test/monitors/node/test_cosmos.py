@@ -60,6 +60,7 @@ class TestCosmosNodeMonitor(unittest.TestCase):
         self.test_exception_3 = PANICException('test_exception_3', 3)
         self.sdk_version_0_39_2 = 'v0.39.2'
         self.sdk_version_0_42_6 = 'v0.42.6'
+        self.sdk_version_0_50_1 = 'v0.50.1'
         self.test_consensus_address = 'test_consensus_address'
         self.test_is_syncing = False
         self.test_is_peered_with_sentinel = True
@@ -401,6 +402,21 @@ class TestCosmosNodeMonitor(unittest.TestCase):
             self.test_monitor._get_cosmos_rest_v0_42_6_indirect_data_validator(
                 self.data_sources[0])
         self.assertEqual(expected_return, actual_return)
+        
+    @mock.patch.object(CosmosRestServerApiWrapper,
+                    'get_staking_validators_v0_50_1')
+    def test_get_cosmos_rest_v0_50_1_indirect_data_validator_return(
+            self, staking_validators_return, expected_return,
+            mock_staking_validators) -> None:
+        """
+        We will check that the return is as expected for all cases
+        """
+        mock_staking_validators.return_value = staking_validators_return
+        actual_return = \
+            self.test_monitor._get_cosmos_rest_v0_50_1_indirect_data_validator(
+                self.data_sources[0])
+        self.assertEqual(expected_return, actual_return)
+
 
     def test_get_cosmos_rest_indirect_data_return_if_empty_source_url(
             self) -> None:
@@ -418,6 +434,11 @@ class TestCosmosNodeMonitor(unittest.TestCase):
         # Test for v0.42.6
         actual_ret = self.test_monitor._get_cosmos_rest_indirect_data(
             self.data_sources[0], self.sdk_version_0_42_6)
+        self.assertEqual(expected_ret, actual_ret)
+    
+        # Test for v0.50.1
+        actual_ret = self.test_monitor._get_cosmos_rest_indirect_data(
+            self.data_sources[0], self.sdk_version_0_50_1)
         self.assertEqual(expected_ret, actual_ret)
 
     def test_get_cosmos_rest_indirect_data_return_if_non_validator_node(
@@ -437,16 +458,25 @@ class TestCosmosNodeMonitor(unittest.TestCase):
         actual_ret = self.test_monitor._get_cosmos_rest_indirect_data(
             self.data_sources[0], self.sdk_version_0_42_6)
         self.assertEqual(expected_ret, actual_ret)
+        
+        # Test for v0.50.1
+        actual_ret = self.test_monitor._get_cosmos_rest_indirect_data(
+            self.data_sources[0], self.sdk_version_0_50_1)
+        self.assertEqual(expected_ret, actual_ret)
 
     @mock.patch.object(CosmosNodeMonitor,
                        '_get_cosmos_rest_v0_39_2_indirect_data_validator')
     @mock.patch.object(CosmosNodeMonitor,
                        '_get_cosmos_rest_v0_42_6_indirect_data_validator')
+    @mock.patch.object(CosmosNodeMonitor,
+                       '_get_cosmos_rest_v0_50_1_indirect_data_validator')
     def test_get_cosmos_rest_indirect_data_return_if_validator_node(
-            self, mock_get_42_indirect, mock_get_39_indirect) -> None:
+            self, mock_get_42_indirect, mock_get_39_indirect, mock_get_50_indirect) -> None:
         mock_get_42_indirect.return_value = \
             self.retrieved_cosmos_rest_indirect_data_1
         mock_get_39_indirect.return_value = \
+            self.retrieved_cosmos_rest_indirect_data_2
+        mock_get_50_indirect.return_value = \
             self.retrieved_cosmos_rest_indirect_data_2
         expected_invalid_version = {
             'bond_status': None,
@@ -486,12 +516,17 @@ class TestCosmosNodeMonitor(unittest.TestCase):
             self.sdk_version_0_42_6)
         actual_ret_v0_39_2 = self.test_monitor._get_cosmos_rest_version_data(
             self.sdk_version_0_39_2)
+        actual_ret_v0_50_1 = self.test_monitor._get_cosmos_rest_version_data(
+            self.sdk_version_0_50_1)
         self.assertEqual(({}, True, NoSyncedDataSourceWasAccessibleException(
             self.monitor_name, 'indirect Cosmos REST node')),
                          actual_ret_v0_42_6)
         self.assertEqual(({}, True, NoSyncedDataSourceWasAccessibleException(
             self.monitor_name, 'indirect Cosmos REST node')),
                          actual_ret_v0_39_2)
+        self.assertEqual(({}, True, NoSyncedDataSourceWasAccessibleException(
+            self.monitor_name, 'indirect Cosmos REST node')),
+                         actual_ret_v0_50_1)
 
     @parameterized.expand([
         (NodeIsDownException('node_name_1'),),
@@ -517,8 +552,11 @@ class TestCosmosNodeMonitor(unittest.TestCase):
             self.sdk_version_0_42_6)
         actual_ret_v0_39_2 = self.test_monitor._get_cosmos_rest_version_data(
             self.sdk_version_0_39_2)
+        actual_ret_v0_50_1 = self.test_monitor._get_cosmos_rest_version_data(
+            self.sdk_version_0_50_1)        
         self.assertEqual(({}, True, err), actual_ret_v0_42_6)
         self.assertEqual(({}, True, err), actual_ret_v0_39_2)
+        self.assertEqual(({}, True, err), actual_ret_v0_50_1)
 
     @mock.patch.object(CosmosNodeMonitor, '_get_cosmos_rest_indirect_data')
     @mock.patch.object(CosmosNodeMonitor, '_cosmos_rest_reachable')
@@ -544,12 +582,17 @@ class TestCosmosNodeMonitor(unittest.TestCase):
             self.sdk_version_0_42_6)
         actual_ret_v0_39_2 = self.test_monitor._get_cosmos_rest_version_data(
             self.sdk_version_0_39_2)
+        actual_ret_v0_50_1 = self.test_monitor._get_cosmos_rest_version_data(
+            self.sdk_version_0_50_1)
         self.assertEqual(
             (self.retrieved_cosmos_rest_indirect_data_1, False, None),
             actual_ret_v0_42_6)
         self.assertEqual(
             (self.retrieved_cosmos_rest_indirect_data_2, False, None),
             actual_ret_v0_39_2)
+        self.assertEqual(
+            (self.retrieved_cosmos_rest_indirect_data_2, False, None),
+            actual_ret_v0_50_1)
 
     @parameterized.expand([
         (CannotConnectWithDataSourceException('test_monitor', 'node_name_1',
@@ -579,8 +622,12 @@ class TestCosmosNodeMonitor(unittest.TestCase):
             self.sdk_version_0_42_6)
         actual_ret_v0_39_2 = self.test_monitor._get_cosmos_rest_version_data(
             self.sdk_version_0_39_2)
+        actual_ret_v0_50_1 = self.test_monitor._get_cosmos_rest_version_data(
+            self.sdk_version_0_50_1)
         self.assertEqual(({}, True, err), actual_ret_v0_42_6)
         self.assertEqual(({}, True, err), actual_ret_v0_39_2)
+        self.assertEqual(({}, True, err), actual_ret_v0_50_1)
+
 
     @mock.patch.object(CosmosNodeMonitor, '_get_cosmos_rest_version_data')
     def test_get_cosmos_rest_v0_39_2_data_calls_get_cosmos_rest_version_data(
@@ -664,6 +711,47 @@ class TestCosmosNodeMonitor(unittest.TestCase):
         actual_ret = self.test_monitor._get_cosmos_rest_v0_42_6_data()
         self.assertEqual(get_rest_version_data_ret, actual_ret)
 
+    @mock.patch.object(CosmosNodeMonitor, '_get_cosmos_rest_version_data')
+    def test_get_cosmos_rest_v0_50_1_data_calls_get_cosmos_rest_version_data(
+            self, mock_get_rest_version) -> None:
+        """
+        In this test we will be checking that self._get_cosmos_rest_v0_50_1_data
+        calls self._get_cosmos_rest_version_data correctly.
+        """
+        mock_get_rest_version.return_value = None
+        self.test_monitor._get_cosmos_rest_v0_50_1_data()
+        mock_get_rest_version.assert_called_once_with(self.sdk_version_0_50_1)
+
+    @parameterized.expand([
+        (({}, True,
+          CannotConnectWithDataSourceException('test_monitor', 'node_name_1',
+                                               'err')),),
+        (({}, True,
+          DataReadingException('test_monitor', 'cosmos_rest_url_1')),),
+        (({}, True, InvalidUrlException('cosmos_rest_url_1')),),
+        (({}, True,
+          CosmosSDKVersionIncompatibleException('node_name_1', 'v0.42.6')),),
+        (({}, True, CosmosRestServerApiCallException('test_call', 'err_msg')),),
+        (({}, True, IncorrectJSONRetrievedException('REST', 'err')),),
+        (({}, True, NoSyncedDataSourceWasAccessibleException(
+            'test_monitor_name', 'indirect Cosmos REST node')),),
+        (({}, True, NodeIsDownException('node_name_1')),),
+        (({'indirect_key': 34}, False, None),),
+    ])
+    @mock.patch.object(CosmosNodeMonitor, '_get_cosmos_rest_version_data')
+    def test_get_cosmos_rest_v0_50_1_data_returns_get_cosmos_rest_ver_data_ret(
+            self, get_rest_version_data_ret, mock_get_rest_version) -> None:
+        """
+        In this test we will be checking that self._get_cosmos_rest_v0_50_1_data
+        returns the value returned by self._get_cosmos_rest_version_data. We
+        will test for every possible return that
+        self._get_cosmos_rest_version_data might return using
+        parameterized.expand
+        """
+        mock_get_rest_version.return_value = get_rest_version_data_ret
+        actual_ret = self.test_monitor._get_cosmos_rest_v0_50_1_data()
+        self.assertEqual(get_rest_version_data_ret, actual_ret)
+        
     @parameterized.expand([
         (({}, True,
           CannotConnectWithDataSourceException('test_monitor', 'node_name_1',
@@ -677,11 +765,12 @@ class TestCosmosNodeMonitor(unittest.TestCase):
         (({}, True, NodeIsDownException('node_name_1')),),
         (({'indirect_key': 34}, False, None),),
     ])
+    @mock.patch.object(CosmosNodeMonitor, '_get_cosmos_rest_v0_50_1_data')
     @mock.patch.object(CosmosNodeMonitor, '_get_cosmos_rest_v0_42_6_data')
     @mock.patch.object(CosmosNodeMonitor, '_get_cosmos_rest_v0_39_2_data')
     def test_get_cosmos_rest_data_uses_last_retrieval_fn_used_first(
             self, retrieval_ret, mock_get_cosmos_rest_v0_39_2,
-            mock_get_cosmos_rest_v0_42_6) -> None:
+            mock_get_cosmos_rest_v0_42_6, mock_get_cosmos_rest_v0_50_1) -> None:
         """
         In this test we will check that first the self._get_cosmos_rest_data
         function first attempts to retrieve data using the last used retrieval
@@ -693,31 +782,45 @@ class TestCosmosNodeMonitor(unittest.TestCase):
         """
         mock_get_cosmos_rest_v0_39_2.return_value = retrieval_ret
         mock_get_cosmos_rest_v0_42_6.return_value = retrieval_ret
-
+        mock_get_cosmos_rest_v0_50_1.return_value = retrieval_ret
         # Test for v0.39.2
         self.test_monitor._last_rest_retrieval_version = self.sdk_version_0_39_2
         self.test_monitor._get_cosmos_rest_data()
         mock_get_cosmos_rest_v0_39_2.assert_called_once()
         mock_get_cosmos_rest_v0_42_6.assert_not_called()
+        mock_get_cosmos_rest_v0_50_1.assert_not_called()
         mock_get_cosmos_rest_v0_39_2.reset_mock()
         mock_get_cosmos_rest_v0_42_6.reset_mock()
+        mock_get_cosmos_rest_v0_50_1.reset_mock()
 
         # Test for v0.42.6
         self.test_monitor._last_rest_retrieval_version = self.sdk_version_0_42_6
         self.test_monitor._get_cosmos_rest_data()
         mock_get_cosmos_rest_v0_39_2.assert_not_called()
         mock_get_cosmos_rest_v0_42_6.assert_called_once()
+        mock_get_cosmos_rest_v0_50_1.assert_not_called()
+        mock_get_cosmos_rest_v0_39_2.reset_mock()
+        mock_get_cosmos_rest_v0_42_6.reset_mock()
+        mock_get_cosmos_rest_v0_50_1.reset_mock()
+        
+        # Test for v0.50.1
+        self.test_monitor._last_rest_retrieval_version = self.sdk_version_0_50_1
+        self.test_monitor._get_cosmos_rest_data()
+        mock_get_cosmos_rest_v0_39_2.assert_not_called()
+        mock_get_cosmos_rest_v0_42_6.assert_not_called()
+        mock_get_cosmos_rest_v0_50_1.assert_called_once()
 
     @parameterized.expand([
         (({}, True, IncorrectJSONRetrievedException('REST', 'err')),),
         (({}, True,
           CosmosSDKVersionIncompatibleException('node_name_1', 'version')),),
     ])
+    @mock.patch.object(CosmosNodeMonitor, '_get_cosmos_rest_v0_50_1_data')
     @mock.patch.object(CosmosNodeMonitor, '_get_cosmos_rest_v0_42_6_data')
     @mock.patch.object(CosmosNodeMonitor, '_get_cosmos_rest_v0_39_2_data')
     def test_get_cosmos_rest_data_attempts_other_rets_if_last_incompatible(
             self, retrieval_ret, mock_get_cosmos_rest_v0_39_2,
-            mock_get_cosmos_rest_v0_42_6) -> None:
+            mock_get_cosmos_rest_v0_42_6, mock_get_cosmos_rest_v0_50_1) -> None:
         """
         In this test we will check that other retrievals are performed if the
         last retrieval performed raises an incompatibility error
@@ -726,21 +829,46 @@ class TestCosmosNodeMonitor(unittest.TestCase):
         mock_get_cosmos_rest_v0_39_2.return_value = retrieval_ret
         mock_get_cosmos_rest_v0_42_6.return_value = \
             (self.retrieved_cosmos_rest_data_1, False, None)
+        mock_get_cosmos_rest_v0_50_1.return_value = \
+            (self.retrieved_cosmos_rest_data_1, False, None)
         self.test_monitor._last_rest_retrieval_version = self.sdk_version_0_39_2
         self.test_monitor._get_cosmos_rest_data()
         mock_get_cosmos_rest_v0_39_2.assert_called_once()
         mock_get_cosmos_rest_v0_42_6.assert_called_once()
+        mock_get_cosmos_rest_v0_50_1.assert_called_once()
         mock_get_cosmos_rest_v0_39_2.reset_mock()
         mock_get_cosmos_rest_v0_42_6.reset_mock()
+        mock_get_cosmos_rest_v0_50_1.reset_mock()
 
         # Test for v0.42.6
         mock_get_cosmos_rest_v0_39_2.return_value = \
             (self.retrieved_cosmos_rest_data_1, False, None)
         mock_get_cosmos_rest_v0_42_6.return_value = retrieval_ret
+        mock_get_cosmos_rest_v0_50_1.return_value = \
+            (self.retrieved_cosmos_rest_data_1, False, None)
         self.test_monitor._last_rest_retrieval_version = self.sdk_version_0_42_6
         self.test_monitor._get_cosmos_rest_data()
         mock_get_cosmos_rest_v0_39_2.assert_called_once()
         mock_get_cosmos_rest_v0_42_6.assert_called_once()
+        mock_get_cosmos_rest_v0_50_1.assert_called_once()
+        mock_get_cosmos_rest_v0_39_2.reset_mock()
+        mock_get_cosmos_rest_v0_42_6.reset_mock()
+        mock_get_cosmos_rest_v0_50_1.reset_mock()
+
+        # Test for v0.42.6
+        mock_get_cosmos_rest_v0_39_2.return_value = \
+            (self.retrieved_cosmos_rest_data_1, False, None)
+        mock_get_cosmos_rest_v0_42_6.return_value = \
+            (self.retrieved_cosmos_rest_data_1, False, None)
+        mock_get_cosmos_rest_v0_50_1.return_value = retrieval_ret
+        self.test_monitor._last_rest_retrieval_version = self.sdk_version_0_50_1
+        self.test_monitor._get_cosmos_rest_data()
+        mock_get_cosmos_rest_v0_39_2.assert_called_once()
+        mock_get_cosmos_rest_v0_42_6.assert_called_once()
+        mock_get_cosmos_rest_v0_50_1.assert_called_once()
+        mock_get_cosmos_rest_v0_39_2.reset_mock()
+        mock_get_cosmos_rest_v0_42_6.reset_mock()
+        mock_get_cosmos_rest_v0_50_1.reset_mock()
 
     @parameterized.expand([
         (({}, True,
@@ -755,11 +883,12 @@ class TestCosmosNodeMonitor(unittest.TestCase):
         (({}, True, NodeIsDownException('node_name_1')),),
         (({'indirect_key': 34}, False, None),),
     ])
+    @mock.patch.object(CosmosNodeMonitor, '_get_cosmos_rest_v0_50_1_data')
     @mock.patch.object(CosmosNodeMonitor, '_get_cosmos_rest_v0_42_6_data')
     @mock.patch.object(CosmosNodeMonitor, '_get_cosmos_rest_v0_39_2_data')
     def test_get_cosmos_rest_data_ret_retrieval_ret_if_no_incompatibility_err(
             self, retrieval_ret, mock_get_cosmos_rest_v0_39_2,
-            mock_get_cosmos_rest_v0_42_6) -> None:
+            mock_get_cosmos_rest_v0_42_6, mock_get_cosmos_rest_v0_50_1) -> None:
         """
         In this test we will check that if data retrieval occurs without an
         incompatibility error being returned, then the function returns whatever
@@ -769,20 +898,20 @@ class TestCosmosNodeMonitor(unittest.TestCase):
         and then for when the last retrieval used function returns an
         incompatibility error and another supported version is successful.
         """
-        self.test_monitor._last_rest_retrieval_version = self.sdk_version_0_42_6
+        self.test_monitor._last_rest_retrieval_version = self.sdk_version_0_50_1
 
         # Test for when the last used retrieval function does not return an
         # incompatibility error
-        mock_get_cosmos_rest_v0_42_6.return_value = retrieval_ret
+        mock_get_cosmos_rest_v0_50_1.return_value = retrieval_ret
         actual_ret = self.test_monitor._get_cosmos_rest_data()
         self.assertEqual(retrieval_ret, actual_ret)
-        mock_get_cosmos_rest_v0_42_6.reset_mock()
+        mock_get_cosmos_rest_v0_50_1.reset_mock()
 
         # Test for when the last used retrieval function returns an
         # incompatibility error but other retrieval functions do not
-        mock_get_cosmos_rest_v0_42_6.return_value = \
+        mock_get_cosmos_rest_v0_50_1.return_value = \
             ({}, True,
-             CosmosSDKVersionIncompatibleException('node_name_1', 'v0.42.6'))
+             CosmosSDKVersionIncompatibleException('node_name_1', 'v0.50.1'))
         mock_get_cosmos_rest_v0_39_2.return_value = retrieval_ret
         actual_ret = self.test_monitor._get_cosmos_rest_data()
         self.assertEqual(retrieval_ret, actual_ret)
@@ -792,11 +921,12 @@ class TestCosmosNodeMonitor(unittest.TestCase):
         (({}, True,
           CosmosSDKVersionIncompatibleException('node_name_1', 'version')),),
     ])
+    @mock.patch.object(CosmosNodeMonitor, '_get_cosmos_rest_v0_50_1_data')
     @mock.patch.object(CosmosNodeMonitor, '_get_cosmos_rest_v0_42_6_data')
     @mock.patch.object(CosmosNodeMonitor, '_get_cosmos_rest_v0_39_2_data')
     def test_get_cosmos_rest_data_ret_if_incompatibility_issue_and_unsuccessful(
             self, retrieval_ret, mock_get_cosmos_rest_v0_39_2,
-            mock_get_cosmos_rest_v0_42_6) -> None:
+            mock_get_cosmos_rest_v0_42_6, mock_get_cosmos_rest_v0_50_1) -> None:
         """
         In this test we will check that if incompatibility issues persist for
         every supported version, then the function returns ({}, True,
@@ -806,6 +936,7 @@ class TestCosmosNodeMonitor(unittest.TestCase):
         """
         mock_get_cosmos_rest_v0_39_2.return_value = retrieval_ret
         mock_get_cosmos_rest_v0_42_6.return_value = retrieval_ret
+        mock_get_cosmos_rest_v0_50_1.return_value = retrieval_ret
         actual_ret = self.test_monitor._get_cosmos_rest_data()
         expected_ret = ({}, True, CosmosRestServerDataCouldNotBeObtained(
             self.data_sources[2].node_name))
@@ -910,7 +1041,44 @@ class TestCosmosNodeMonitor(unittest.TestCase):
                     }
                 ]
             }
-        }], [
+        }, {
+	"jsonrpc": "2.0",
+	"id": -1,
+	"result": {
+		"block_height": "9313442",
+		"validators": [
+			{
+				"address": "addr_5",
+				"pub_key": {
+					"type": "tendermint/PubKeyEd25519",
+					"value": "jzi1FcwjpprsVIqbXujev/Cfzwg7oFrybXmm/7jNeiI="
+				},
+				"voting_power": "121500000001",
+				"proposer_priority": "79425248532"
+			},
+			{
+				"address": "addr_6",
+				"pub_key": {
+					"type": "tendermint/PubKeyEd25519",
+					"value": "CqXadXTNawX+OiayRorBsMebtQx35TttI3IspuzaN/Q="
+				},
+				"voting_power": "121500000001",
+				"proposer_priority": "-204933381423"
+			},
+			{
+				"address": "addr_7",
+				"pub_key": {
+					"type": "tendermint/PubKeyEd25519",
+					"value": "nT9mxX1Ap7O6BdEnvs6ZUG7xuKD7kY0NWtu9GUZIBCk="
+				},
+				"voting_power": "121500000001",
+				"proposer_priority": "11980115931"
+			},
+		],
+		"count": "5",
+		"total": "5"
+	}
+}], [
              {
                  "address": "addr_1",
                  "voting_power": "43",
@@ -926,7 +1094,34 @@ class TestCosmosNodeMonitor(unittest.TestCase):
              {
                  "address": "addr_4",
                  "voting_power": "46",
-             }
+             },
+		    {
+				"address": "addr_5",
+				"pub_key": {
+					"type": "tendermint/PubKeyEd25519",
+					"value": "jzi1FcwjpprsVIqbXujev/Cfzwg7oFrybXmm/7jNeiI="
+				},
+				"voting_power": "121500000001",
+				"proposer_priority": "79425248532"
+			},
+			{
+				"address": "addr_6",
+				"pub_key": {
+					"type": "tendermint/PubKeyEd25519",
+					"value": "CqXadXTNawX+OiayRorBsMebtQx35TttI3IspuzaN/Q="
+				},
+				"voting_power": "121500000001",
+				"proposer_priority": "-204933381423"
+			},
+			{
+				"address": "addr_7",
+				"pub_key": {
+					"type": "tendermint/PubKeyEd25519",
+					"value": "nT9mxX1Ap7O6BdEnvs6ZUG7xuKD7kY0NWtu9GUZIBCk="
+				},
+				"voting_power": "121500000001",
+				"proposer_priority": "11980115931"
+			},
          ],),
         ([{
             "jsonrpc": "2.0",
@@ -973,8 +1168,17 @@ class TestCosmosNodeMonitor(unittest.TestCase):
              {
                  "address": "addr_4",
                  "voting_power": "46",
-             }
-         ], 'addr_4', True,),
+             },		
+             {
+				"address": "addr_5",
+				"pub_key": {
+					"type": "tendermint/PubKeyEd25519",
+					"value": "jzi1FcwjpprsVIqbXujev/Cfzwg7oFrybXmm/7jNeiI="
+				},
+				"voting_power": "121500000001",
+				"proposer_priority": "79425248532"
+			},
+         ], 'addr_5', True,),
         ([
              {
                  "address": "addr_1",
@@ -991,8 +1195,17 @@ class TestCosmosNodeMonitor(unittest.TestCase):
              {
                  "address": "addr_4",
                  "voting_power": "46",
-             }
-         ], 'addr_5', False,),
+             },
+            {
+				"address": "addr_5",
+				"pub_key": {
+					"type": "tendermint/PubKeyEd25519",
+					"value": "jzi1FcwjpprsVIqbXujev/Cfzwg7oFrybXmm/7jNeiI="
+				},
+				"voting_power": "121500000001",
+				"proposer_priority": "79425248532"
+			},
+         ], 'addr_6', False,),
         ([
              {
                  "address": "addr_1",
@@ -1027,7 +1240,16 @@ class TestCosmosNodeMonitor(unittest.TestCase):
              {
                  "address": "addr_4",
                  "voting_power": "46",
-             }
+             },
+            {
+				"address": "addr_5",
+				"pub_key": {
+					"type": "tendermint/PubKeyEd25519",
+					"value": "jzi1FcwjpprsVIqbXujev/Cfzwg7oFrybXmm/7jNeiI="
+				},
+				"voting_power": "121500000001",
+				"proposer_priority": "79425248532"
+			},
          ], "", False,),
         ([], "addr_1", False,),
     ])
@@ -1042,15 +1264,13 @@ class TestCosmosNodeMonitor(unittest.TestCase):
         self.assertEqual(expected_return, actual_return)
 
     @parameterized.expand([
-        ([
-             {"type": "transfer"},
+        ([           {"type": "transfer"},
              {
                  "type": "slash",
                  "attributes": [
                      {
                          "key": "YWRkcmVzcw==",
-                         "value": 'Y29zbW9zdmFsY29uczEwdjdzcmE2NW1sdXl3bmtzdWR2'
-                                  'Z3p0NzV4bHNmOHp3dXpzcThyMw==',
+                         "value": "Y29zbW9zdmFsY29uczEwdjdzcmE2NW1sdXl3bmtzdWR2Z3p0NzV4bHNmOHp3dXpzcThyMw==",
                          "index": True
                      },
                      {
@@ -1074,62 +1294,89 @@ class TestCosmosNodeMonitor(unittest.TestCase):
                          "index": True
                      }
                  ]
-             }
+             },
          ], '7B3D01F754DFF8474ED0E358812FD437E09389DC', (True, None),),
         ([
+            {
+                 "type": "slash",
+                 "attributes": [
+                     {
+                         "key": "address",
+                         "value": "cosmosvalcons10v7sra65mluywnksudvgzt75xlsf8zwuzsq8r3",
+                         "index": True
+                     }
+                 ]
+             }
+         ], '7B3D01F754DFF8474ED0E358812FD437E09389DC', (True, None),),
+        ([   {"type": "transfer"},
+             {
+                 "type": "slash",
+                 "attributes": [
+                     {
+                         "key": "YWRkcmVzcw==",
+                         "value": "Y29zbW9zdmFsY29uczEwdjdzcmE2NW1sdXl3bmtzdWR2Z3p0NzV4bHNmOHp3dXpzcThyMw==",
+                         "index": True
+                     },
+                     {
+                         "key": "cG93ZXI=",
+                         "value": "MTM2NTk2NTY2NDg=",
+                         "index": True
+                     },
+                     {
+                         "key": "cmVhc29u",
+                         "value": "ZG91YmxlX3NpZ24=",
+                         "index": True
+                     },
+                     {
+                         "key": "YnVybmVkX2NvaW5z",
+                         "value": "MTAwMA==",
+                         "index": True
+                     }
+                 ]
+             },
+             {
+                 "type": "slash",
+                 "attributes": [
+                     {
+                         "key": "YWRkcmVzcw==",
+                         "value": "Y29zbW9zdmFsY29uczEwdjdzcmE2NW1sdXl3bmtzdWR2Z3p0NzV4bHNmOHp3dXpzcThyMw==",
+                         "index": True
+                     },
+                     {
+                         "key": "cG93ZXI=",
+                         "value": "MTM2NTk2NTY2NDg=",
+                         "index": True
+                     },
+                     {
+                         "key": "cmVhc29u",
+                         "value": "ZG91YmxlX3NpZ24=",
+                         "index": True
+                     },
+                     {
+                         "key": "YnVybmVkX2NvaW5z",
+                         "value": "MTAwMA==",
+                         "index": True
+                     }
+                 ]
+             }
+         ], '7B3D01F754DFF8474ED0E358812FD437E09389DC', (True, 2000),),
+        ([
              {"type": "transfer"},
-             {
+            {
                  "type": "slash",
                  "attributes": [
                      {
-                         "key": "YWRkcmVzcw==",
-                         "value": 'Y29zbW9zdmFsY29uczEwdjdzcmE2NW1sdXl3b'
-                                  'mtzdWR2Z3p0NzV4bHNmOHp3dXpzcThyMw==',
+                         "key": "address",
+                         "value": "cosmosvalcons10v7sra65mluywnksudvgzt75xlsf8zwuzsq8r3",
                          "index": True
                      },
-                     {
-                         "key": "cG93ZXI=",
-                         "value": "MTM2NTk2NTY2NDg=",
-                         "index": True
-                     },
-                     {
-                         "key": "cmVhc29u",
-                         "value": "ZG91YmxlX3NpZ24=",
-                         "index": True
-                     },
-                     {
-                         "key": "YnVybmVkX2NvaW5z",
-                         "value": "MTAwMA==",
+                    {
+                         "key": "burned_coins",
+                         "value": "2000",
                          "index": True
                      }
                  ]
-             },
-             {
-                 "type": "slash",
-                 "attributes": [
-                     {
-                         "key": "YWRkcmVzcw==",
-                         "value": 'Y29zbW9zdmFsY29uczEwdjdzcmE2NW1sdXl3bmt'
-                                  'zdWR2Z3p0NzV4bHNmOHp3dXpzcThyMw==',
-                         "index": True
-                     },
-                     {
-                         "key": "cG93ZXI=",
-                         "value": "MTM2NTk2NTY2NDg=",
-                         "index": True
-                     },
-                     {
-                         "key": "cmVhc29u",
-                         "value": "ZG91YmxlX3NpZ24=",
-                         "index": True
-                     },
-                     {
-                         "key": "YnVybmVkX2NvaW5z",
-                         "value": "MTAwMA==",
-                         "index": True
-                     }
-                 ]
-             },
+             }
          ], '7B3D01F754DFF8474ED0E358812FD437E09389DC', (True, 2000),),
         ([
              {"type": "transfer"},
@@ -1168,7 +1415,7 @@ class TestCosmosNodeMonitor(unittest.TestCase):
                          "index": True
                      }
                  ]
-             },
+             }
          ], 'addr_1', (False, None),),
         ([
              {"type": "transfer"},
@@ -1226,6 +1473,7 @@ class TestCosmosNodeMonitor(unittest.TestCase):
         Given a number of scenarios we will check that the
         _validator_was_slashed function will correctly determine if a validator
         was slashed or not, and will give the amount if available.
+        Couln't determine if the values where base64 encoded or not, so implemented both cases
         """
         self.test_monitor._validator_consensus_address = consensus_address
         actual_return = self.test_monitor._validator_was_slashed(
@@ -1343,7 +1591,7 @@ class TestCosmosNodeMonitor(unittest.TestCase):
         mock_get_block_results.side_effect = [
             {
                 'result': {
-                    'begin_block_events': [
+                    'finalize_block_events': [
                         {
                             "type": "slash",
                             "attributes": [
@@ -1371,7 +1619,7 @@ class TestCosmosNodeMonitor(unittest.TestCase):
             },
             {
                 'result': {
-                    'begin_block_events': [
+                    'finalize_block_events': [
                         {
                             "type": "slash",
                             "attributes": [
@@ -1399,7 +1647,7 @@ class TestCosmosNodeMonitor(unittest.TestCase):
             },
             {
                 'result': {
-                    'begin_block_events': [
+                    'finalize_block_events': [
                         {
                             "type": "slash",
                             "attributes": [

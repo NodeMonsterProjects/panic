@@ -599,6 +599,12 @@ class CosmosNodeMonitor(CosmosMonitor):
             # cannot be active, hence not slashed
             return False, None
 
+        def try_base64_decode(s):
+            try:
+                return base64.b64decode(s).decode('utf-8')
+            except (base64.binascii.Error, UnicodeDecodeError):
+                return s
+
         slashed = False
         slashed_amount = None
         for event in begin_block_events:
@@ -612,18 +618,13 @@ class CosmosNodeMonitor(CosmosMonitor):
                 attributes = event['attributes']
                 for attribute in attributes:
                     if 'key' in attribute and 'value' in attribute:
-                        # decoded_key = base64.b64decode(attribute['key']).decode(
-                        #     'utf-8')
-                        # decoded_value = base64.b64decode(
-                        #     attribute['value']).decode('utf-8')
-                        # if str.lower(decoded_key) == "address":
-                        #     event_address = bech32_to_address(decoded_value)
-                        # elif str.lower(decoded_key) == "burned_coins":
-                        #     event_burned_coins = int(decoded_value)
-                        if str.lower(attribute['key']) == "address":
-                            event_address = bech32_to_address(attribute['value'])
-                        elif str.lower(attribute['key']) == "burned_coins":
-                            event_burned_coins = int(attribute['value'])
+                        decoded_key = try_base64_decode(attribute['key'])
+                        decoded_value = try_base64_decode(attribute['value'])
+
+                        if str.lower(decoded_key) == "address":
+                            event_address = bech32_to_address(decoded_value)
+                        elif str.lower(decoded_key) == "burned_coins":
+                            event_burned_coins = int(decoded_value)
 
                 if event_address == self.validator_consensus_address:
                     slashed = True

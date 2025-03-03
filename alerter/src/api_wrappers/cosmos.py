@@ -30,7 +30,8 @@ class CosmosRestServerApiWrapper(ApiWrapper):
     def get_syncing(self, cosmos_rest_url: str) -> Dict:
         """
         This function retrieves data from the cosmos_rest_url/syncing endpoint,
-        and is compatible with both v0.39.2 and v0.42.6 of the Cosmos SDK
+        and is *NOT* compatible with both v0.39.2 and v0.42.6, 
+        but *ONLY* compatible with v0.50.1 of the Cosmos SDK
         :param cosmos_rest_url: The Cosmos REST url of the data source
         :return: Retrieves data from the cosmos_rest_url/syncing endpoint
         """

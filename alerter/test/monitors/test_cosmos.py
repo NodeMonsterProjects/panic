@@ -90,6 +90,7 @@ class TestCosmosMonitor(unittest.TestCase):
             connection_check_time_interval=self.connection_check_time_interval)
         self.sdk_version_0_39_2 = 'v0.39.2'
         self.sdk_version_0_42_6 = 'v0.42.6'
+        self.sdk_version_0_50_1 = 'v0.50.1'
 
         # Some dummy retrieval data
         self.rest_ret_1 = {
@@ -176,8 +177,11 @@ class TestCosmosMonitor(unittest.TestCase):
 
     def test_last_rest_retrieval_version_returns_last_rest_retrieval_version(
             self) -> None:
-        # First we will check that last_rest_retrieval_version is set to v0.42.6
+        # First we will check that last_rest_retrieval_version is set to v0.50.1
         # on __init__
+        self.assertEqual(self.sdk_version_0_50_1,
+                         self.test_monitor.last_rest_retrieval_version)
+        self.test_monitor._last_rest_retrieval_version = self.sdk_version_0_42_6
         self.assertEqual(self.sdk_version_0_42_6,
                          self.test_monitor.last_rest_retrieval_version)
         self.test_monitor._last_rest_retrieval_version = self.sdk_version_0_39_2
@@ -293,7 +297,7 @@ class TestCosmosMonitor(unittest.TestCase):
         """
         mock_execute_with_checks.return_value = {"syncing": False}
         actual = self.test_monitor._select_cosmos_rest_node(
-            self.data_sources, self.sdk_version_0_39_2)
+            self.data_sources, self.sdk_version_0_50_1)
         self.assertEqual(self.data_sources[0], actual)
 
     @mock.patch.object(CosmosRestServerApiWrapper, 'execute_with_checks')
@@ -310,7 +314,7 @@ class TestCosmosMonitor(unittest.TestCase):
             {"syncing": False}
         ]
         actual = self.test_monitor._select_cosmos_rest_node(
-            self.data_sources, self.sdk_version_0_39_2)
+            self.data_sources, self.sdk_version_0_50_1)
         self.assertEqual(self.data_sources[2], actual)
 
     @parameterized.expand([
@@ -322,7 +326,7 @@ class TestCosmosMonitor(unittest.TestCase):
         (IncompleteRead('test'),),
         (ChunkedEncodingError('test'),),
         (ProtocolError('test'),),
-        (CosmosSDKVersionIncompatibleException('test_node', 'v0.39.2'),),
+        (CosmosSDKVersionIncompatibleException('test_node', 'v0.50.1'),),
         (CosmosRestServerApiCallException('test_call', 'err_msg'),),
         (KeyError('test'),),
     ])
@@ -343,7 +347,7 @@ class TestCosmosMonitor(unittest.TestCase):
             {"syncing": False}
         ]
         actual = self.test_monitor._select_cosmos_rest_node(
-            self.data_sources, self.sdk_version_0_39_2)
+            self.data_sources, self.sdk_version_0_50_1)
         self.assertEqual(self.data_sources[2], actual)
 
     @parameterized.expand([
@@ -355,7 +359,7 @@ class TestCosmosMonitor(unittest.TestCase):
         (IncompleteRead('test'),),
         (ChunkedEncodingError('test'),),
         (ProtocolError('test'),),
-        (CosmosSDKVersionIncompatibleException('test_node', 'v0.39.2'),),
+        (CosmosSDKVersionIncompatibleException('test_node', 'v0.50.1'),),
         (CosmosRestServerApiCallException('test_call', 'err_msg'),),
         (KeyError('test'),),
     ])
@@ -374,7 +378,7 @@ class TestCosmosMonitor(unittest.TestCase):
             {"syncing": True}
         ]
         actual = self.test_monitor._select_cosmos_rest_node(
-            self.data_sources, self.sdk_version_0_39_2)
+            self.data_sources, self.sdk_version_0_50_1)
         self.assertIsNone(actual)
 
     @mock.patch.object(TendermintRpcApiWrapper, 'execute_with_checks')
@@ -478,7 +482,7 @@ class TestCosmosMonitor(unittest.TestCase):
         mock_execute_with_checks.side_effect = {"syncing": False}
         actual_reachable, actual_data_retrieval_exception = \
             self.test_monitor._cosmos_rest_reachable(self.data_sources[2],
-                                                     self.sdk_version_0_39_2)
+                                                     self.sdk_version_0_50_1)
         self.assertTrue(actual_reachable)
         self.assertIsNone(actual_data_retrieval_exception)
 
@@ -491,7 +495,7 @@ class TestCosmosMonitor(unittest.TestCase):
         (IncompleteRead('test'), DataReadingException,),
         (ChunkedEncodingError('test'), DataReadingException,),
         (ProtocolError('test'), DataReadingException,),
-        (CosmosSDKVersionIncompatibleException('test_node', 'v0.39.2'),
+        (CosmosSDKVersionIncompatibleException('test_node', 'v0.50.1'),
          CosmosSDKVersionIncompatibleException,),
         (CosmosRestServerApiCallException('test_call', 'err_msg'),
          CosmosRestServerApiCallException,),
@@ -509,7 +513,7 @@ class TestCosmosMonitor(unittest.TestCase):
         mock_execute_with_checks.side_effect = raised_exception
         actual_reachable, actual_data_retrieval_exception = \
             self.test_monitor._cosmos_rest_reachable(self.data_sources[2],
-                                                     self.sdk_version_0_39_2)
+                                                     self.sdk_version_0_50_1)
         self.assertFalse(actual_reachable)
         self.assertIsInstance(actual_data_retrieval_exception,
                               returned_exception_type)
@@ -523,7 +527,7 @@ class TestCosmosMonitor(unittest.TestCase):
         source_url = self.data_sources[0].cosmos_rest_url
         actual_ret = \
             self.test_monitor._execute_cosmos_rest_retrieval_with_exceptions(
-                test_fn, source_name, source_url, self.sdk_version_0_39_2
+                test_fn, source_name, source_url, self.sdk_version_0_50_1
             )
         self.assertEqual(self.test_data_dict, actual_ret)
 
@@ -536,7 +540,7 @@ class TestCosmosMonitor(unittest.TestCase):
         (IncompleteRead('test'), DataReadingException,),
         (ChunkedEncodingError('test'), DataReadingException,),
         (ProtocolError('test'), DataReadingException,),
-        (CosmosSDKVersionIncompatibleException('test_node', 'v0.39.2'),
+        (CosmosSDKVersionIncompatibleException('test_node', 'v0.50.1'),
          CosmosSDKVersionIncompatibleException,),
         (CosmosRestServerApiCallException('test_call', 'err_msg'),
          CosmosRestServerApiCallException,),
@@ -552,7 +556,7 @@ class TestCosmosMonitor(unittest.TestCase):
         self.assertRaises(
             expected_raised_exception,
             self.test_monitor._execute_cosmos_rest_retrieval_with_exceptions,
-            test_fn, source_name, source_url, self.sdk_version_0_39_2
+            test_fn, source_name, source_url, self.sdk_version_0_50_1
         )
 
     @parameterized.expand([
@@ -646,7 +650,7 @@ class TestCosmosMonitor(unittest.TestCase):
         mock_execute.side_effect = [self.rest_ret_1, self.rest_ret_2]
         node_name = self.data_sources[0].node_name
         actual_ret = self.test_monitor._get_rest_data_with_pagination_keys(
-            test_fn, [], {}, node_name, self.sdk_version_0_42_6)
+            test_fn, [], {}, node_name, self.sdk_version_0_50_1)
         self.assertEqual([self.rest_ret_1, self.rest_ret_2], actual_ret)
 
     @mock.patch.object(CosmosRestServerApiWrapper, 'execute_with_checks')
@@ -673,13 +677,13 @@ class TestCosmosMonitor(unittest.TestCase):
             }
         ]
         self.test_monitor._get_rest_data_with_pagination_keys(
-            test_fn, test_args, test_params, node_name, self.sdk_version_0_42_6)
+            test_fn, test_args, test_params, node_name, self.sdk_version_0_50_1)
 
         calls = mock_execute.call_args_list
         self.assertEqual(2, len(calls))
         mock_execute.assert_has_calls([
-            call(test_fn, test_args_first, node_name, self.sdk_version_0_42_6),
-            call(test_fn, test_args_second, node_name, self.sdk_version_0_42_6),
+            call(test_fn, test_args_first, node_name, self.sdk_version_0_50_1),
+            call(test_fn, test_args_second, node_name, self.sdk_version_0_50_1),
         ])
 
     @mock.patch.object(TendermintRpcApiWrapper, 'execute_with_checks')
