@@ -69,23 +69,23 @@ class TestCosmosNodeMonitor(unittest.TestCase):
         # --------------- Data retrieval variables and examples ---------------
         # Prometheus
         self.prometheus_metrics = {
-            'tendermint_consensus_latest_block_height': 'strict',
-            'tendermint_consensus_validator_power': 'optional',
+            'consensus_latest_block_height': 'strict',
+            'consensus_validator_power': 'optional',
         }
         self.retrieved_prometheus_data_example_1 = {
-            'tendermint_consensus_latest_block_height': {
+            'consensus_latest_block_height': {
                 '{"chain_id": "cosmoshub-4"}': 8137538.0
             },
-            'tendermint_consensus_validator_power': {
+            'consensus_validator_power': {
                 '{"chain_id": "cosmoshub-4", "validator_address": '
                 '"7B3D01F754DFF8474ED0E358812FD437E09389DC"}': 725315.0
             }
         }
         self.retrieved_prometheus_data_example_2 = {
-            'tendermint_consensus_latest_block_height': {
+            'consensus_latest_block_height': {
                 '{"chain_id": "cosmoshub-4"}': 538.0
             },
-            'tendermint_consensus_validator_power': {
+            'consensus_validator_power': {
                 '{"chain_id": "cosmoshub-4", "validator_address": '
                 '"7B3D01F754DFF8474ED0E358812FD437E09389DC"}': None
             }
@@ -154,12 +154,12 @@ class TestCosmosNodeMonitor(unittest.TestCase):
 
         # Processed retrieved data example
         self.processed_prometheus_data_example_1 = {
-            'tendermint_consensus_latest_block_height': 8137538.0,
-            'tendermint_consensus_validator_power': 725315.0,
+            'consensus_latest_block_height': 8137538.0,
+            'consensus_validator_power': 725315.0,
         }
         self.processed_prometheus_data_example_2 = {
-            'tendermint_consensus_latest_block_height': 538.0,
-            'tendermint_consensus_validator_power': 0,
+            'consensus_latest_block_height': 538.0,
+            'consensus_validator_power': 0,
         }
 
         # Test monitor instance

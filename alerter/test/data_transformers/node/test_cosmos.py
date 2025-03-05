@@ -114,8 +114,8 @@ class TestCosmosNodeDataTransformer(unittest.TestCase):
                         'operator_address': self.test_operator_address,
                     },
                     'data': {
-                        'tendermint_consensus_latest_block_height': 10000.0,
-                        'tendermint_consensus_validator_power': 345456.0,
+                        'consensus_latest_block_height': 10000.0,
+                        'consensus_validator_power': 345456.0,
                     },
                 }
             },
@@ -186,7 +186,7 @@ class TestCosmosNodeDataTransformer(unittest.TestCase):
         self.raw_data_example_result_options_None = copy.deepcopy(
             self.raw_data_example_result_all)
         self.raw_data_example_result_options_None['prometheus'][
-            'result']['data']['tendermint_consensus_validator_power'] = None
+            'result']['data']['consensus_validator_power'] = None
         self.raw_data_example_result_options_None['tendermint_rpc']['result'][
             'data']['historical'] = None
         self.raw_data_example_result_options_None['tendermint_rpc']['result'][

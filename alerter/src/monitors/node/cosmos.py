@@ -83,12 +83,12 @@ class CosmosNodeMonitor(CosmosMonitor):
         ]
 
         # --------------------------- PROMETHEUS -------------------------------
-        # tendermint_consensus_validator_power needs to be set as optional
+        # consensus_validator_power needs to be set as optional
         # because it is non-existent for nodes which are not in the validator
         # set.
         self._prometheus_metrics = {
-            'tendermint_consensus_latest_block_height': 'strict',
-            'tendermint_consensus_validator_power': 'optional',
+            'consensus_latest_block_height': 'strict',
+            'consensus_validator_power': 'optional',
         }
 
         # -------------------------- TENDERMINT RPC ---------------------------
@@ -1012,8 +1012,8 @@ class CosmosNodeMonitor(CosmosMonitor):
         # were set to be optional, so first we need to check if the value is
         # None.
         one_value_subset_metrics = [
-            'tendermint_consensus_latest_block_height',
-            'tendermint_consensus_validator_power',
+            'consensus_latest_block_height',
+            'consensus_validator_power',
         ]
         for metric in one_value_subset_metrics:
             value = None
@@ -1024,17 +1024,17 @@ class CosmosNodeMonitor(CosmosMonitor):
             self.logger.debug("%s %s: %s", self.node_config, metric, value)
             processed_data['result']['data'][metric] = value
 
-        # If the tendermint_consensus_validator_power is None it means that the
+        # If the consensus_validator_power is None it means that the
         # metric could not be obtained, hence the node is not in the validator
         # set. This means that we can set the metric to 0 as the node has no
         # voting power.
         voting_power = processed_data['result']['data'][
-            'tendermint_consensus_validator_power']
+            'consensus_validator_power']
         if voting_power is None:
             self.logger.debug("%s %s converted to %s", self.node_config,
-                              'tendermint_consensus_validator_power', 0)
+                              'consensus_validator_power', 0)
             processed_data['result']['data'][
-                'tendermint_consensus_validator_power'] = 0
+                'consensus_validator_power'] = 0
 
         return processed_data
 
