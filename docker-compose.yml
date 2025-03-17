@@ -1,4 +1,4 @@
-version: '3.7'
+version: '3.8'
 
 services:
   # 3 replica sets: primary rs1
@@ -12,6 +12,8 @@ services:
         max-size: "10m"
     restart: always
     command: mongod --replSet replica-set
+    volumes:
+      - mongo-data-rs1:/data/db
     networks:
       panic_net:
         ipv4_address: '${DB_IP_REPLICA_1}'
@@ -26,6 +28,8 @@ services:
         max-size: "10m"
     restart: always
     command: mongod --replSet replica-set
+    volumes:
+      - mongo-data-rs2:/data/db
     networks:
       panic_net:
         ipv4_address: '${DB_IP_REPLICA_2}'
@@ -40,6 +44,8 @@ services:
         max-size: "10m"
     restart: always
     command: mongod --replSet replica-set
+    volumes:
+      - mongo-data-rs3:/data/db
     networks:
       panic_net:
         ipv4_address: '${DB_IP_REPLICA_3}'
@@ -85,6 +91,8 @@ services:
       panic_net:
         ipv4_address: '${REDIS_IP}'
     restart: always
+    volumes:
+      - redis-data:/data
     container_name: 'redis'
 
   rabbitmq:
@@ -308,4 +316,7 @@ networks:
         - subnet: 172.18.0.0/24
 
 volumes:
-  db-data:
+  mongo-data-rs1:
+  mongo-data-rs2:
+  mongo-data-rs3:
+  redis-data:
