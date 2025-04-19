@@ -1,2 +1,2 @@
 #!/bin/bash
-node src/server.js
+node /opt/panic/substrate-api/src/server.js

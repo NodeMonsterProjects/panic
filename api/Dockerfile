@@ -1,4 +1,6 @@
-FROM node:14
+FROM node:20-alpine
+
+RUN apk add bash
 
 # Create app directory
 WORKDIR /opt/panic
@@ -8,7 +10,7 @@ COPY ./entities ./entities
 
 # Change directory, and copy all installer contents from the host to the
 # container.
-WORKDIR ./api
+WORKDIR /opt/panic/api
 COPY ./api ./
 
 # RUN npm install (ci)

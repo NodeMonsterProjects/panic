@@ -200,7 +200,7 @@ export class ConfigResource {
       await this.createBkp(config);
 
       const request = ObjectUtil.deepCamelToSnake(req.body);
-      const model: Document = MongooseUtil.merge(config, request);
+      const model: Document<Config> = MongooseUtil.merge(config, request);
 
       await this.save(res, model);
     } catch (err: any) {

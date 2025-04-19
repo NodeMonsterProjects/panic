@@ -9,34 +9,32 @@ import { OpsgenieModelBuilder } from "./OpsgenieModelBuilder";
  * Builder to create Mongoose Schema and Model of Config Entity
  */
 export class OpsgenieOldModelBuilder implements IModelBuilder<Channel> {
+  private _schema: Schema = null;
+  private _model: Model<Channel> = null;
 
-    private _schema: Schema = null;
-    private _model: Model<Channel> = null;
+  public produceSchema(): void {
+    //make copy
+    const builder = new OpsgenieModelBuilder();
+    builder.produceSchema();
 
-    public produceSchema(): void {
+    this._schema = builder.schema;
 
-        //make copy
-        const builder = new OpsgenieModelBuilder()
-        builder.produceSchema();
+    MongooseUtil.virtualize(this._schema);
+  }
 
-        this._schema = builder.schema;
+  public produceModel(): void {
+    this._model = mongoose.model<Channel>(
+      ModelName.OPSGENIE_OLD,
+      this._schema,
+      Collection.CONFIG_OLD
+    );
+  }
 
-        MongooseUtil.virtualize(this._schema);
-    }
+  public get model(): Model<Channel> {
+    return this._model;
+  }
 
-    public produceModel(): void {
-        this._model = mongoose.model(
-            ModelName.OPSGENIE_OLD,
-            this._schema,
-            Collection.CONFIG_OLD
-        ) as Model<Channel>;
-    }
-
-    public get model(): Model<Channel> {
-        return this._model;
-    }
-
-    public get schema(): Schema {
-        return this._schema;
-    }
+  public get schema(): Schema {
+    return this._schema;
+  }
 }

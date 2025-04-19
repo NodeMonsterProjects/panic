@@ -1,11 +1,13 @@
-FROM node:16
+FROM node:23-alpine
+
+RUN apk add bash
 
 # Create app directory
 WORKDIR /opt/panic
 
 # Change directory, and copy all installer contents from the host to the
 # container.
-WORKDIR ./web-installer
+WORKDIR /opt/panic/web-installer
 COPY ./web-installer ./
 
 ENV GENERATE_SOURCEMAP=false

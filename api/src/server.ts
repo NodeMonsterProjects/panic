@@ -212,11 +212,11 @@ const mongoHost = process.env.DB_IP || "localhost";
 const mongoPort = parseInt(process.env.DB_PORT || "27017");
 const mongoDB = process.env.DB_NAME || "panicdb";
 const mongoOptions: MongoClientOptions = {
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
   socketTimeoutMS: 10000,
   connectTimeoutMS: 10000,
   serverSelectionTimeoutMS: 5000,
+  replicaSet: process.env.REPLICA_SET_NAME || "rs1",
+  readPreference: "primaryPreferred",
 };
 const mongoInterface = new MongoInterface(mongoOptions, mongoHost, mongoPort);
 
@@ -304,7 +304,7 @@ app.post(
           const query = { _id: { $in: baseChainsInput } };
           const docs = await collection.find(query).toArray();
           for (const doc of docs) {
-            const baseChainData: any = result.result[doc._id];
+            const baseChainData: any = result.result[doc._id.toString()];
             delete doc._id;
             for (const parentID in doc) {
               const chain = doc[parentID];
