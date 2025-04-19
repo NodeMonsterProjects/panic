@@ -1,11 +1,12 @@
-FROM node:16
+FROM node:23-alpine
 
+RUN apk add bash
 # Create app directory
 WORKDIR /opt/panic
 
 # Change directory, and copy all substrate-api contents from the host to the
 # container.
-WORKDIR ./substrate-api
+WORKDIR /opt/panic/substrate-api
 COPY ./substrate-api ./
 
 # RUN npm install
@@ -17,4 +18,4 @@ RUN npm run build
 # Expose port
 EXPOSE 8080
 
-CMD bash run_server.sh
+CMD ["node", "/opt/panic/substrate-api/src/server.js"]

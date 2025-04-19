@@ -1,4 +1,6 @@
-FROM node:14
+FROM node:23-alpine
+
+RUN apk add bash
 
 # Pass args from docker-compose since ENV variables are required in build step.
 ARG API_PORT
@@ -13,15 +15,15 @@ ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
 WORKDIR /opt/panic
 
 # Change directory, and copy all required types from the host to the container.
-WORKDIR ./entities
+WORKDIR /opt/panic/entities
 COPY ./entities ./
 
 # Change directory, and copy all required api contents from the host to the container.
-WORKDIR ../api/src/util
+WORKDIR /opt/panic/api/src/util
 COPY ./api/src/util ./
 
 # Change directory, and copy all ui contents from the host to the container.
-WORKDIR ../../../ui
+WORKDIR /opt/panic/ui
 COPY ./ui ./
 
 # Clean any old build directories

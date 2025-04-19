@@ -8,7 +8,7 @@ import pika
 from src.configs.nodes.cosmos import CosmosNodeConfig
 from src.message_broker.rabbitmq import RabbitMQApi
 from src.monitors.cosmos import (
-    CosmosMonitor, _REST_VERSION_COSMOS_SDK_0_42_6,
+    _REST_VERSION_COSMOS_SDK_0_50_1, CosmosMonitor, _REST_VERSION_COSMOS_SDK_0_42_6,
     _REST_VERSION_COSMOS_SDK_0_39_2, _VERSION_INCOMPATIBILITY_EXCEPTIONS)
 from src.utils.constants.cosmos import (
     PROPOSAL_STATUS_UNSPECIFIED, PROPOSAL_STATUS_DEPOSIT_PERIOD,
@@ -59,65 +59,69 @@ class CosmosNetworkMonitor(CosmosMonitor):
 
     @staticmethod
     def _parse_proposal(proposal: Dict) -> Dict:
-        """
-        This function parses the proposal retrieved from the source node and
-        returns the corresponding value to be used by the PANIC components.
-        Note that this function is compatible with both v0.39.2 and v0.42.6 of
-        the Cosmos SDK.
-        :param proposal: The proposal retrieved from the source node
-        :return: The corresponding proposal to be used by the PANIC components
-        :raises: KeyError if the structure of the proposal returned by the
-                 endpoints is not as expected.
-        """
-        parsed_proposal = {
-            'proposal_id': (
-                proposal['proposal_id']
-                if 'proposal_id' in proposal
-                else proposal['id']
-            ),
-            'title': (
-                proposal['content']['value']['title']
-                if 'value' in proposal['content']
-                else proposal['content']['title']
-            ),
-            'description': (
-                proposal['content']['value']['description']
-                if 'value' in proposal['content']
-                else proposal['content']['description']
+            """
+            This function parses the proposal retrieved from the source node and
+            returns the corresponding value to be used by the PANIC components.
+            Note that this function is compatible with both v0.39.2, v0.42.6 and v0.50.1 of
+            the Cosmos SDK.
+            :param proposal: The proposal retrieved from the source node
+            :return: The corresponding proposal to be used by the PANIC components
+            :raises: KeyError if the structure of the proposal returned by the
+                    endpoints is not as expected.
+            """
+            parsed_proposal = {
+                'proposal_id': (
+                    proposal['proposal_id']
+                    if 'proposal_id' in proposal
+                    else proposal['id']
+                ),
+                'title': (
+                    proposal['content']['value']['title']
+                    if 'content' in proposal and 'value' in proposal['content']
+                    else proposal['content']['title']
+                    if 'content' in proposal
+                    else proposal['title']
+                ),
+                'description': (
+                    proposal['content']['value']['description']
+                    if 'content' in proposal and 'value' in proposal['content']
+                    else proposal['content']['description']
+                    if 'content' in proposal
+                    else proposal['summary']
+                )
+            }
+
+            status = (
+                proposal['status']
+                if 'status' in proposal
+                else proposal['proposal_status']
             )
-        }
 
-        status = (
-            proposal['status']
-            if 'status' in proposal
-            else proposal['proposal_status']
-        )
+            if type(status) == str:
+                status = status.lower()
+            if status in [0, "proposal_status_unspecified", "unspecified"]:
+                parsed_proposal['status'] = PROPOSAL_STATUS_UNSPECIFIED
+            elif status in [1, "proposal_status_deposit_period", "deposit_period"]:
+                parsed_proposal['status'] = PROPOSAL_STATUS_DEPOSIT_PERIOD
+            elif status in [2, "proposal_status_voting_period", "voting_period"]:
+                parsed_proposal['status'] = PROPOSAL_STATUS_VOTING_PERIOD
+            elif status in [3, "proposal_status_passed", "passed"]:
+                parsed_proposal['status'] = PROPOSAL_STATUS_PASSED
+            elif status in [4, "proposal_status_rejected", "rejected"]:
+                parsed_proposal['status'] = PROPOSAL_STATUS_REJECTED
+            elif status in [5, "proposal_status_failed", "failed"]:
+                parsed_proposal['status'] = PROPOSAL_STATUS_FAILED
+            else:
+                parsed_proposal['status'] = PROPOSAL_STATUS_INVALID
 
-        if type(status) == str:
-            status = status.lower()
-        if status in [0, "proposal_status_unspecified", "unspecified"]:
-            parsed_proposal['status'] = PROPOSAL_STATUS_UNSPECIFIED
-        elif status in [1, "proposal_status_deposit_period", "deposit_period"]:
-            parsed_proposal['status'] = PROPOSAL_STATUS_DEPOSIT_PERIOD
-        elif status in [2, "proposal_status_voting_period", "voting_period"]:
-            parsed_proposal['status'] = PROPOSAL_STATUS_VOTING_PERIOD
-        elif status in [3, "proposal_status_passed", "passed"]:
-            parsed_proposal['status'] = PROPOSAL_STATUS_PASSED
-        elif status in [4, "proposal_status_rejected", "rejected"]:
-            parsed_proposal['status'] = PROPOSAL_STATUS_REJECTED
-        elif status in [5, "proposal_status_failed", "failed"]:
-            parsed_proposal['status'] = PROPOSAL_STATUS_FAILED
-        else:
-            parsed_proposal['status'] = PROPOSAL_STATUS_INVALID
+            parsed_proposal['final_tally_result'] = proposal['final_tally_result']
+            parsed_proposal['submit_time'] = proposal['submit_time']
+            parsed_proposal['deposit_end_time'] = proposal['deposit_end_time']
+            parsed_proposal['total_deposit'] = proposal['total_deposit']
+            parsed_proposal['voting_start_time'] = proposal['voting_start_time']
+            parsed_proposal['voting_end_time'] = proposal['voting_end_time']
 
-        parsed_proposal['final_tally_result'] = proposal['final_tally_result']
-        parsed_proposal['submit_time'] = proposal['submit_time']
-        parsed_proposal['deposit_end_time'] = proposal['deposit_end_time']
-        parsed_proposal['total_deposit'] = proposal['total_deposit']
-        parsed_proposal['voting_start_time'] = proposal['voting_start_time']
-        parsed_proposal['voting_end_time'] = proposal['voting_end_time']
-
-        return parsed_proposal
+            return parsed_proposal
 
     def _get_cosmos_rest_v0_39_2_indirect_data(
             self, source: CosmosNodeConfig) -> Dict:
@@ -197,6 +201,47 @@ class CosmosNetworkMonitor(CosmosMonitor):
         return self._execute_cosmos_rest_retrieval_with_exceptions(
             retrieval_process, source_name, source_url,
             _REST_VERSION_COSMOS_SDK_0_42_6)
+        
+    def _get_cosmos_rest_v0_50_1_indirect_data(
+            self, source: CosmosNodeConfig) -> Dict:
+        """
+        This function retrieves network specific metrics. To retrieve this
+        data we use version v0.50.1 of the Cosmos SDK for the REST server.
+        :param source: The chosen data source
+        :return: A dict containing all indirect metrics
+        :raises: CosmosSDKVersionIncompatibleException if the Cosmos SDK version
+                 of the source is not compatible with v0.50.1
+               : CosmosRestServerApiCallException if an error occurs during an
+                 API call
+               : DataReadingException if data cannot be read from the source
+               : CannotConnectWithDataSourceException if we cannot connect with
+                 the data source
+               : InvalidUrlException if the URL of the data source does not have
+                 a valid schema
+               : IncorrectJSONRetrievedException if the structure of the data
+                 returned by the endpoints is not as expected. This could be
+                 both due to a Tendermint or Cosmos SDK update
+        """
+        source_url = source.cosmos_rest_url
+        source_name = source.node_name
+
+        def retrieval_process() -> Dict:
+            paginated_data = self._get_rest_data_with_pagination_keys(
+                self.cosmos_rest_server_api.get_proposals_v0_50_1,
+                [source_url, None], {}, source_name,
+                _REST_VERSION_COSMOS_SDK_0_50_1)
+
+            parsed_proposals = {'proposals': []}
+            for page in paginated_data:
+                for proposal in page['proposals']:
+                    parsed_proposals['proposals'].append(
+                        self._parse_proposal(proposal))
+
+            return parsed_proposals
+
+        return self._execute_cosmos_rest_retrieval_with_exceptions(
+            retrieval_process, source_name, source_url,
+            _REST_VERSION_COSMOS_SDK_0_50_1)
 
     def _get_cosmos_rest_indirect_data(self, source: CosmosNodeConfig,
                                        sdk_version: str) -> Dict:
@@ -216,6 +261,9 @@ class CosmosNetworkMonitor(CosmosMonitor):
             return self._get_cosmos_rest_v0_39_2_indirect_data(source)
         elif sdk_version == _REST_VERSION_COSMOS_SDK_0_42_6:
             return self._get_cosmos_rest_v0_42_6_indirect_data(source)
+        elif sdk_version == _REST_VERSION_COSMOS_SDK_0_50_1:
+            return self._get_cosmos_rest_v0_50_1_indirect_data(source)
+            
 
         return {
             'proposals': None
@@ -269,6 +317,16 @@ class CosmosNetworkMonitor(CosmosMonitor):
         """
         return self._get_cosmos_rest_version_data(
             _REST_VERSION_COSMOS_SDK_0_42_6)
+        
+    def _get_cosmos_rest_v0_50_1_data(self) -> (
+            Dict, bool, Optional[Exception]):
+        """
+        This function calls self._get_cosmos_rest_version_data with
+        _REST_VERSION_COSMOS_SDK_0_50_1
+        :return: The return of self._get_cosmos_rest_version_data
+        """
+        return self._get_cosmos_rest_version_data(
+            _REST_VERSION_COSMOS_SDK_0_50_1)
 
     def _get_cosmos_rest_data(self) -> (Dict, bool, Optional[Exception]):
         """
@@ -283,6 +341,7 @@ class CosmosNetworkMonitor(CosmosMonitor):
         supported_retrievals = {
             _REST_VERSION_COSMOS_SDK_0_39_2: self._get_cosmos_rest_v0_39_2_data,
             _REST_VERSION_COSMOS_SDK_0_42_6: self._get_cosmos_rest_v0_42_6_data,
+            _REST_VERSION_COSMOS_SDK_0_50_1: self._get_cosmos_rest_v0_50_1_data
         }
 
         # First check whether REST data can be obtained using the last REST

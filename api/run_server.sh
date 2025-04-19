@@ -1,2 +1,2 @@
 #!/bin/bash
-node src/server.js
+node --trace-deprecation src/server.js

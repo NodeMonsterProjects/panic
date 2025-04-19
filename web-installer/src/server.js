@@ -1054,12 +1054,13 @@ app.post('/server/cosmos/rest', verify, async (req, res) => {
     return;
   }
 
-  const url = `${restUrl}/node_info`;
+  const url = `${restUrl}/cosmos/base/tendermint/v1beta1/node_info`;
 
   axios
     .get(url, { params: {} })
     .then((response) => {
-      if ('node_info' in response.data) {
+      console.log(response.data);
+      if ("default_node_info" in response.data) {
         const msg = new msgs.MessagePong();
         res.status(utils.SUCCESS_STATUS).send(utils.resultJson(msg.message));
       } else {
