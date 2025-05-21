@@ -87,8 +87,8 @@ class CosmosNodeMonitor(CosmosMonitor):
         # because it is non-existent for nodes which are not in the validator
         # set.
         self._prometheus_metrics = {
-            'consensus_latest_block_height': 'strict',
-            'consensus_validator_power': 'optional',
+            'tendermint_consensus_latest_block_height': 'strict',
+            'tendermint_consensus_validator_power': 'optional',
         }
 
         # -------------------------- TENDERMINT RPC ---------------------------
