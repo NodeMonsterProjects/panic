@@ -1,5 +1,5 @@
 import {Component, h, Host, Prop, State} from '@stencil/core';
-import {BaseChain, SubChain} from '../../interfaces/chains';
+import {SubChain} from '../../interfaces/chains';
 import {Metrics} from '../../interfaces/metrics';
 import {ChainsAPI} from '../../utils/chains';
 import {POLLING_FREQUENCY} from '../../utils/constants';
