@@ -23,29 +23,24 @@ export class PanicSystemsOverview implements PanicSystemsOverviewInterface {
     _updater: number;
     _updateFrequency: number = POLLING_FREQUENCY;
 
-    async componentWillLoad() {
+    componentWillLoad() {
         if (!this.baseChainName) {
-            throw new SystemsOverviewNoBaseChainSpecifiedError();
+            console.error(new SystemsOverviewNoBaseChainSpecifiedError());
+            return;
         }
 
-        try {
-            // Get specified base chain.
-            const baseChain: BaseChain = await ChainsAPI.getBaseChainByName(this.baseChainName);
-            // Check if base chain exists.
+        // Don't await — component renders immediately, data populates async.
+        ChainsAPI.getBaseChainByName(this.baseChainName).then(baseChain => {
             if (!baseChain) {
                 throw new SystemsOverviewBaseChainNotFoundError(this.baseChainName);
             }
-
-            // Store chains.
             this._chains = baseChain.subChains;
-            await this.reRenderAction();
-
+            return this.reRenderAction();
+        }).then(() => {
             this._updater = window.setInterval(async () => {
                 await this.reRenderAction();
             }, this._updateFrequency);
-        } catch (error: any) {
-            console.error(error);
-        }
+        }).catch(console.error);
     }
 
     async reRenderAction() {

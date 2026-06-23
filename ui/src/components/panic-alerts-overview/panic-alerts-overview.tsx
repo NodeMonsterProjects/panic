@@ -29,21 +29,19 @@ export class PanicAlertsOverview implements PanicAlertsOverviewInterface {
     _updateFrequency: number = POLLING_FREQUENCY;
     _isFirstRun: boolean = false;
 
-    async componentWillLoad() {
-        try {
-            this._subChains = await ChainsAPI.getSubChains();
-            await this.reRenderAction();
-
+    componentWillLoad() {
+        // Fetch subchains once, then load alerts without blocking the initial render.
+        ChainsAPI.getSubChains().then(subChains => {
+            this._subChains = subChains;
+            return this.reRenderAction();
+        }).then(() => {
             this._updater = window.setInterval(async () => {
                 await this.reRenderAction();
             }, this._updateFrequency);
-        } catch (error: any) {
-            console.error(error);
-        }
+        }).catch(console.error);
     }
 
     async reRenderAction() {
-        this._subChains = await ChainsAPI.getSubChains();
         this.alerts = await AlertsAPI.getAlerts(this._subChains, this._filterState);
     }
 

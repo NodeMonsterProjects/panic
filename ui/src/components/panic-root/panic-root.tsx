@@ -111,22 +111,23 @@ export class PanicRoot implements PanicRootInterface {
     }
 
     async loadDomainEntities() {
-        const baseChains = await BaseChainService.getInstance().getAll();
+        const [baseChains, channelTypes, severityTypes, repositoryTypes, sourceTypes] =
+            await Promise.all([
+                BaseChainService.getInstance().getAll(),
+                DomainService.getInstance().getAllChannelTypes(),
+                DomainService.getInstance().getAllSeverityTypes(),
+                DomainService.getInstance().getAllRepositoryTypes(),
+                DomainService.getInstance().getAllSourceTypes(),
+            ]);
         this.baseChains = baseChains.sort((next: BaseChain, curr: BaseChain) => {
-            if (next.name > curr.name)
-                return 1;
-
-            if (next.name < curr.name)
-                return -1;
-
-            if (next.name == curr.name)
-                return 0;
+            if (next.name > curr.name) return 1;
+            if (next.name < curr.name) return -1;
+            return 0;
         });
-        this.channelTypes = await DomainService.getInstance().getAllChannelTypes();
-        this.severityTypes = await DomainService.getInstance().getAllSeverityTypes();
-        this.repositoryTypes = await DomainService.getInstance().getAllRepositoryTypes();
-        this.sourceTypes = await DomainService.getInstance().getAllSourceTypes();
-        this.channelTypes = await DomainService.getInstance().getAllChannelTypes();
+        this.channelTypes = channelTypes;
+        this.severityTypes = severityTypes;
+        this.repositoryTypes = repositoryTypes;
+        this.sourceTypes = sourceTypes;
     }
 
     /**

@@ -30,11 +30,12 @@ export class PanicDashboardOverview implements PanicDashboardOverviewInterface {
                 await createModal("panic-installer-modal", {},
                   {backdropDismiss: false});
             } else {
-                await this.reRenderAction();
-
-                this._updater = window.setInterval(async () => {
-                    await this.reRenderAction();
-                }, this._updateFrequency);
+                // Don't await — component renders immediately, data populates async.
+                this.reRenderAction().then(() => {
+                    this._updater = window.setInterval(async () => {
+                        await this.reRenderAction();
+                    }, this._updateFrequency);
+                }).catch(console.error);
             }
         } catch (error: any) {
             console.error(error);
