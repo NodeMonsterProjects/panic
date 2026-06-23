@@ -80,21 +80,32 @@ def get_prometheus_metrics_data(endpoint: str,
     metrics = get_prometheus(endpoint, logger, verify)
     for family in text_string_to_metric_families(metrics):
         for sample in family.samples:
+            # Match exact name or any namespaced variant (e.g. tendermint_foo
+            # or cometbft_foo both match requested key foo).
+            matched_key = None
             if sample.name in requested_metrics:
-                if sample.name not in response:
+                matched_key = sample.name
+            else:
+                for req_metric in requested_metrics:
+                    if sample.name.endswith('_' + req_metric):
+                        matched_key = req_metric
+                        break
+
+            if matched_key is not None:
+                if matched_key not in response:
                     if sample.labels != {}:
-                        response[sample.name] = {}
-                        response[sample.name][json.dumps(sample.labels)] = \
+                        response[matched_key] = {}
+                        response[matched_key][json.dumps(sample.labels)] = \
                             sample.value
                     else:
-                        response[sample.name] = sample.value
+                        response[matched_key] = sample.value
                 else:
                     if sample.labels != {}:
-                        response[sample.name][json.dumps(sample.labels)] = \
+                        response[matched_key][json.dumps(sample.labels)] = \
                             sample.value
                     else:
-                        response[sample.name] = sample.value + \
-                                                response[sample.name]
+                        response[matched_key] = sample.value + \
+                                                response[matched_key]
 
     missing_metrics = set(requested_metrics) - set(response)
     for metric in missing_metrics:
